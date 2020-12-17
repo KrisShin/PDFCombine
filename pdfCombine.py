@@ -1,8 +1,8 @@
 import os
 import re
 from PyPDF4.pdf import PdfFileReader as pr, PdfFileWriter as pw
-import img2pdf
-from pathlib import Path
+from io import BytesIO
+from PIL import Image, ImageDraw
 
 
 def MergePDF(dir_path):
@@ -10,10 +10,12 @@ def MergePDF(dir_path):
     merged_file = pw()
     for filename in os.listdir(dir_path):
         ext = filename.split('.')[-1]
-        if ext.lower() in ['pdf', 'jpg', 'png', 'jpeg', 'tiff']:
+        if filename in ['merged.pdf', 'tempImg.pdf']:
+            os.remove(filename)
+            continue
+        if ext.lower() in ['pdf', 'jpg', 'jpeg', 'tiff']:
             pdf_files.append(filename)
 
-    print(pdf_files)
     # 按文件名中的数字排序
     pdf_files = sorted(pdf_files, key=lambda i: int(re.findall(r'^(\d+).*?', i)
                                      [0]) if re.findall(r'^(\d+).*?', i) else -1)
@@ -22,8 +24,40 @@ def MergePDF(dir_path):
         print(pdf_file)
         ext = pdf_file.split('.')[-1]
         if ext.lower() in ['jpg', 'png', 'jpeg', 'tiff']:
-            imgPage = img2pdf.convert(pdf_file)
-            merged_file.addPage(imgPage)
+            bimg = open(pdf_file, 'rb')
+            img = Image.open(BytesIO(bimg))
+            stream = BytesIO()
+            img.save(stream, ext)
+            img.close()
+            pg = pr().
+
+            for i in range(0, pdf.getNumPages()):
+                pg = pdf.getPage(i)
+                obj = pg['/Resources']['/XObject']
+
+                for j in obj:
+                    img = obj[j].getData()
+                    stream = covertImg(img)
+
+                    # 在PyPDF4 1.27.0中，此方法未实现，需要修改
+                    obj[j].setData(stream)
+
+                newpdf.addPage(pg)
+            
+            def covertImg(bimg):
+                img = Image.open(BytesIO(bimg))
+
+                # 看你想实现什么功能了
+                im = doSomething(img)
+                
+                stream = BytesIO()
+
+                # 将图片保存到stream中
+                # 注意，保存的格式要和pdf中原图片的格式保持一致
+                im.save(stream, 'jpeg')
+
+                img.close()
+                return stream.getvalue()
         else:
             # 读取PDF文件
             try:
@@ -51,7 +85,8 @@ def MergePDF(dir_path):
         # 注意这里的写法和正常的上下文文件写入是相反的
         merged_file.write(outputfile)
     print('Done')
-    input()
+
+    # input()
 
 
 if __name__ == '__main__':
