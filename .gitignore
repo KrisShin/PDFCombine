@@ -3,3 +3,12 @@
 !.vscode/tasks.json
 !.vscode/launch.json
 !.vscode/extensions.json
+
+*.jpg
+*.png
+*.jpeg
+*.pdf
+*.spec
+
+**/build/
+**/dist/
