@@ -6,23 +6,30 @@ import pikepdf._cpphelpers
 
 
 def main(dir_path):
-    file_list = get_file_list(dir_path)
-    merged_file = merge_pdf(file_list)
+    file_list, temp_files = get_file_list(dir_path)
+    merged_file, fp_list = merge_pdf(file_list)
     save_pdf(merged_file)
-    print('Done')
-    input()
+    remove_temp_files(fp_list,temp_files)
+    input('Done')
+
+
+def remove_temp_files(fp_list,file_list):
+    for fp in fp_list:
+        fp.close()
+        
+    for filename in file_list:
+        os.remove(filename)
 
 
 def conv_img2pdf(filename, ext):
     with open(f'{filename}.pdf', 'wb') as pdf:
         img = img2pdf.convert(filename+ext)
         pdf.write(img)
-        filename += '.pdf'
-    return filename
+    return f'{filename}.pdf'
 
 
 def get_file_list(dir_path):
-    file_list = list()
+    file_list, temp_files = list(), list()
     for filename in os.listdir(dir_path):
         path, ext = os.path.splitext(filename)
         if filename == 'merged.pdf':
@@ -31,22 +38,25 @@ def get_file_list(dir_path):
         if ext in ['.jpg', '.pdf']:
             if ext == '.jpg':
                 filename = conv_img2pdf(path, ext)
+                temp_files.append(filename)
             file_list.append(filename)
 
     # 按文件名中的数字排序
     file_list = sorted(file_list, key=lambda i: int(re.findall(r'^(\d+).*?', i)
                                                     [0]) if re.findall(r'^(\d+).*?', i) else -1)
-    return file_list
+    return file_list, temp_files
 
 
 def merge_pdf(file_list):
     merged_file = pw()
+    fp_list = list()
 
     for pdf_file in file_list:
         print(pdf_file)
         # 读取PDF文件
+        pdf_binary = open(pdf_file, "rb")
         try:
-            pdf = pr(open(pdf_file, "rb"))
+            pdf = pr(pdf_binary)
         except:
             print(f'{pdf_file}无法解析')
             continue
@@ -66,7 +76,8 @@ def merge_pdf(file_list):
         # 分别将page添加到输出output中
         for iPage in range(pageCount):
             merged_file.addPage(pdf.getPage(iPage))
-    return merged_file
+        fp_list.append(pdf_binary)
+    return merged_file, fp_list
 
 
 def save_pdf(merged_file):
